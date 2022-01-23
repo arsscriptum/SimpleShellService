@@ -13,6 +13,26 @@
 #include <iostream>
 #include <codecvt>
 #include <locale> 
+
+
+LPWSTR StringToString(LPCSTR str)
+{
+    int size = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+    PWCHAR result = new WCHAR[size];
+    MultiByteToWideChar(CP_UTF8, 0, str, -1, result, size);
+
+    return result;
+}
+LPSTR StringToString(LPCWSTR str)
+{
+    int size = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
+    PCHAR result = new CHAR[size];
+    WideCharToMultiByte(CP_UTF8, 0, str, -1, result, size, NULL, NULL);
+
+    return result;
+}
+
+
 std::wstring stringToWstring(const char* utf8Bytes)
 {
 	//setup converter

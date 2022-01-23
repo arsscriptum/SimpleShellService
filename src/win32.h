@@ -19,3 +19,5 @@ std::string GetLastMsg();
 std::wstring stringToWstring(const char* utf8Bytes);
 
 #endif
+LPWSTR StringToString(LPCSTR str);
+LPSTR StringToString(LPCWSTR str);

