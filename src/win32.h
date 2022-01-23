@@ -11,7 +11,11 @@
 #ifndef WINAPIEX_H
 #define WINAPIEX_H
 
+#ifdef UNICODE
 std::wstring GetLastMsg();
+#else
+std::string GetLastMsg();
+#endif
 std::wstring stringToWstring(const char* utf8Bytes);
 
 #endif

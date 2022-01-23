@@ -122,11 +122,9 @@ GENERIC_EXECUTE | GENERIC_ALL)
 #ifdef UNICODE
 #pragma message("-------------------------------")
 #pragma message("CHARACTER SET IS UNICODE ")
-#define _PRINTF wprintf
 #else
 #pragma message("-------------------------------")
 #pragma message("CHARACTER SET IS SINGLE BYTE ")
-#define _PRINTF printf
 #endif 
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -145,6 +143,7 @@ GENERIC_EXECUTE | GENERIC_ALL)
 
 
 #ifdef UNICODE
+#  define           _PRINTF         wprintf
 #  define			_STRCMP		    wstrcmp
 #  define			_STRRCHR		wcsrchr
 #  define			_STRLEN			wcslen
@@ -153,6 +152,7 @@ GENERIC_EXECUTE | GENERIC_ALL)
 #define				_STRNCPY		wcsncpy
 #  define			_STRNLEN		wcsnlen
 #else
+#  define           _PRINTF         printf
 #  define			_STRCMP		    strcmp
 #  define			_STRRCHR		strrchr
 #  define			_STRLEN			strlen

@@ -86,6 +86,10 @@ goto :init
     call :call_make_build Debug x64
     goto :eof
 
+:build_uni
+    call :call_make_build DebugUnicode x64
+    goto :eof
+
 :: ==============================================================================
 ::   Build x64
 :: ==============================================================================
@@ -115,11 +119,11 @@ goto :init
     if "%__target%" == "rebuild" (
 		call :clean
 		)
-    if "%__target%" == "debug" (
-        call :build_debug
+    if "%__target%" == "uni" (
+        call :build_uni
         goto :finished
         )
-    call :build_release
+    call :build_debug
     goto :finished
 
 

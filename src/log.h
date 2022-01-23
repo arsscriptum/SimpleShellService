@@ -105,25 +105,20 @@ const std::string CONSOLE_COLOR_GREEN = "\u001b[32m";
 const std::string CONSOLE_COLOR_YELLOW = "\u001b[33m";
 
 void __cdecl ConsoleOut( std::string color, const char *format, ...);
-void __cdecl SystemDebugOutput(const wchar_t *channel, const char *format, ...);
 void __cdecl ConsoleLog(const char *format, ...);
-void __cdecl ConsoleNet(const char *format, ...);
-void __cdecl ConsoleError(const char *format, ...);
-void __cdecl ConsoleInstaller(const char *format, ...);
-# define COUTCMD( ... ) { ConsoleLog(  __VA_ARGS__ );  }	
-# define LOG_INSTALL( ... ) { ConsoleInstaller(  __VA_ARGS__ );  }
-# define COUTNET( ... ) { ConsoleNet(  __VA_ARGS__ );  }
-# define COUTRS( ... ) { ConsoleOut(CONSOLE_COLOR_RED,  __VA_ARGS__ );  }	
-# define COUTR( ... ) { ConsoleOut(CONSOLE_COLOR_RED_BRIGHT,  __VA_ARGS__ );  }	
-# define COUTG( ... ) { ConsoleOut(CONSOLE_COLOR_GREEN_BRIGHT,  __VA_ARGS__ );  }	
-# define COUTY( ... ) { ConsoleOut(CONSOLE_COLOR_YELLOW_BRIGHT,  __VA_ARGS__ );  }	
-# define COUTM( ... ) { ConsoleOut(CONSOLE_COLOR_MAGENTA_BRIGHT,  __VA_ARGS__ );  }	
-# define COUTC( ... ) { ConsoleOut(CONSOLE_COLOR_CYAN_BRIGHT,  __VA_ARGS__ );  }	
-# define COUTCS( ... ) { ConsoleOut(CONSOLE_COLOR_CYAN,  __VA_ARGS__ );  }
-# define COUTERR( ... ) { ConsoleError(  __VA_ARGS__ );  }	
-# define COUTINFO( ... ) { ConsoleOut( CONSOLE_COLOR_BKGRND_WHITE, __VA_ARGS__ );  }	
-# define LOG_CONSOLE( color, ... ) { ConsoleOut( color, __VA_ARGS__ );  }	
 
+# define COUTCMD( ... )     { ConsoleLog(  __VA_ARGS__ );  }	
+# define COUTRS( ... )      { ConsoleOut(CONSOLE_COLOR_RED,  __VA_ARGS__ );  }	
+# define COUTR( ... )       { ConsoleOut(CONSOLE_COLOR_RED_BRIGHT,  __VA_ARGS__ );  }	
+# define COUTG( ... )       { ConsoleOut(CONSOLE_COLOR_GREEN_BRIGHT,  __VA_ARGS__ );  }	
+# define COUTY( ... )       { ConsoleOut(CONSOLE_COLOR_YELLOW_BRIGHT,  __VA_ARGS__ );  }	
+# define COUTM( ... )       { ConsoleOut(CONSOLE_COLOR_MAGENTA_BRIGHT,  __VA_ARGS__ );  }	
+# define COUTC( ... )       { ConsoleOut(CONSOLE_COLOR_CYAN_BRIGHT,  __VA_ARGS__ );  }	
+# define COUTCS( ... )      { ConsoleOut(CONSOLE_COLOR_CYAN,  __VA_ARGS__ );  }
+# define COUTINFO( ... )    { ConsoleOut( CONSOLE_COLOR_BKGRND_WHITE, __VA_ARGS__ );  }	
+
+#define _NETPRINTF ConsoleLog
+int WriteToLog(char* str);
 #ifndef DEJA_DISABLED
 	# define LOG_TRACE DEJA_TRACE	
 	# define LOG_INFO DEJA_TRACE

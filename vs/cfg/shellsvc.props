@@ -11,11 +11,15 @@
      <SolutionRootDirectory>$(ProjectDir)..\</SolutionRootDirectory>
   </PropertyGroup> 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>NotSet</CharacterSet>
     <UseDebugLibraries>true</UseDebugLibraries>    
   </PropertyGroup> 
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+  <PropertyGroup Condition="'$(Configuration)'=='DebugUnicode'">
     <CharacterSet>Unicode</CharacterSet>
+    <UseDebugLibraries>true</UseDebugLibraries>    
+  </PropertyGroup>   
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <CharacterSet>NotSet</CharacterSet>
     <UseDebugLibraries>false</UseDebugLibraries>    
   </PropertyGroup>    
   <PropertyGroup Label="ModuleMacros">
@@ -76,7 +80,7 @@
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='DebugUnicode'">
     <ClCompile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -84,16 +88,24 @@
       <PreprocessorDefinitions>UNICODE;DEBUG;DEVELOPMENT;DEBUG_INFO;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>NOUNICODE;DEBUG;DEVELOPMENT;DEBUG_INFO;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>  
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <PreprocessorDefinitions>UNICODE;RELEASE;DEVELOPMENT;DEBUG_INFO;WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOUNICODE;RELEASE;DEVELOPMENT;DEBUG_INFO;WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>  
 
-  <Target Name="PrintBuildConfig" BeforeTargets="InitializeBuildStatus">
+  <Target Name="PrintBuildConfig" BeforeTargets="Build">
     <Message Text="================================================================================================" />
     <Message Text="    *** application props ***   " />
     <Message Text="CharacterSet: $(CharacterSet)." />

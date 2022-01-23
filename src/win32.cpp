@@ -23,7 +23,7 @@ std::wstring stringToWstring(const char* utf8Bytes)
 	return converter.from_bytes(utf8Bytes);
 
 }
-
+#ifdef UNICODE
 std::wstring GetLastMsg()
 {
     std::wstring _ret = stringToWstring("no error");
@@ -51,3 +51,32 @@ std::wstring GetLastMsg()
     LocalFree(lpBuffer);
     return _msg;
 }
+#else
+std::string GetLastMsg()
+{
+    std::string _ret = "no error";
+    DWORD errorCode = GetLastError();
+    if (errorCode == 0)
+        return _ret;
+
+    // map errorCode into a system defined error string
+
+    DWORD dwFlags =
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER;
+    LPCVOID lpSource = NULL;
+    DWORD dwMessageID = errorCode;
+    DWORD dwLanguageId = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
+    LPSTR lpBuffer;
+    DWORD nSize = 0;
+    va_list* Arguments = NULL;
+
+    FormatMessage(
+        dwFlags, lpSource, dwMessageID, dwLanguageId,
+        (LPSTR)&lpBuffer, nSize, Arguments
+    );
+    printf("%s", lpBuffer);
+    std::string _msg = lpBuffer;
+    LocalFree(lpBuffer);
+    return _msg;
+}
+#endif
