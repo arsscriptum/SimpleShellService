@@ -233,9 +233,9 @@ DWORD WINAPI HandleScks(LPVOID lpParam)
       LOG_TRACE("HandleSocks2","receivedBytes %d break",receivedBytes);
       break;
     }
-    LOG_TRACE("HandleSocks2","receivedBytes %d",receivedBytes);
     if (receivedBytes)      //check for user input.
     {
+
       LOG_TRACE("HandleSocks2","%c",*buf);
       WriteFile(write_stdin,buf,receivedBytes,&bread,NULL); //send it to stdin
       if (*buf == '\r') {
