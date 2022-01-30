@@ -59,6 +59,8 @@
     <ClCompile Include="..\src\log.cpp" />
     <ClCompile Include="..\src\svcmain.cpp" />
     <ClCompile Include="..\src\win32.cpp" />
+    <ClCompile Include="..\src\cmdline.cpp" />
+    <ClCompile Include="..\src\netclient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(ProjectRoot)src\resources.rc" />
@@ -75,6 +77,8 @@
     <ClInclude Include="..\src\svcinc\Handle.h" />
     <ClInclude Include="..\src\targetver.h" />
     <ClInclude Include="..\src\win32.h" />
+    <ClInclude Include="..\src\cmdline.h" />
+    <ClInclude Include="..\src\netclient.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

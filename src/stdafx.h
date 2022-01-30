@@ -63,6 +63,13 @@
 #include <iostream>
 #include <string>
 
+#define bzero(a) memset(a,0,sizeof(a)) //easier -- shortcut
+
+bool IsWinNT();  //check if we're running NT
+
+
+void ErrorMessage(char *str);
+
 std::string base_name(std::string const & path);
 typedef std::basic_string<TCHAR> String;
 inline std::string string_base_name(std::string const & path);

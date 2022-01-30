@@ -109,9 +109,9 @@ void __cdecl ConsoleLog(const char *format, ...);
 
 # define COUTCMD( ... )     { ConsoleLog(  __VA_ARGS__ );  }	
 # define COUTRS( ... )      { ConsoleOut(CONSOLE_COLOR_RED,  __VA_ARGS__ );  }	
-# define COUTR( ... )       { ConsoleOut(CONSOLE_COLOR_RED_BRIGHT,  __VA_ARGS__ );  }	
+# define COUTR( ... )       { ConsoleOut(CONSOLE_COLOR_RED,  __VA_ARGS__ );  }	
 # define COUTG( ... )       { ConsoleOut(CONSOLE_COLOR_GREEN_BRIGHT,  __VA_ARGS__ );  }	
-# define COUTY( ... )       { ConsoleOut(CONSOLE_COLOR_YELLOW_BRIGHT,  __VA_ARGS__ );  }	
+# define COUTY( ... )       { ConsoleOut(CONSOLE_COLOR_YELLOW,  __VA_ARGS__ );  }	
 # define COUTM( ... )       { ConsoleOut(CONSOLE_COLOR_MAGENTA_BRIGHT,  __VA_ARGS__ );  }	
 # define COUTC( ... )       { ConsoleOut(CONSOLE_COLOR_CYAN_BRIGHT,  __VA_ARGS__ );  }	
 # define COUTCS( ... )      { ConsoleOut(CONSOLE_COLOR_CYAN,  __VA_ARGS__ );  }

@@ -15,6 +15,9 @@
 #include <system_error>
 #include <memory>
 #include <string>
+#include "log.h"
+#pragma comment(lib, "advapi32.lib")
+#pragma comment(lib, "ws2_32.lib") //Winsock Library
 
 typedef std::basic_string<TCHAR> String;
 
@@ -34,7 +37,30 @@ inline std::string string_base_name(std::string const & path)
 	return base_name(path);
 }
 
+void ErrorMessage(char *str)  //display detailed error info
+{
+  LPVOID msg;
+  FormatMessage(
+    FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+    NULL,
+    GetLastError(),
+    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+    (LPTSTR) &msg,
+    0,
+    NULL
+  );
+  LOG_ERROR("svcmain::%s","%s",(char*)str,(char*)msg);
+  //printf("%s: %s\n",(char*)str,(char*)msg);
+  LocalFree(msg);
+}
 
+bool IsWinNT()  //check if we're running NT
+{
+  OSVERSIONINFO osv;
+  osv.dwOSVersionInfoSize = sizeof(osv);
+  GetVersionEx(&osv);
+  return (osv.dwPlatformId == VER_PLATFORM_WIN32_NT);
+}
 void decomposePath(const TCHAR *filePath, TCHAR *fileDir, TCHAR *fileName, TCHAR *fileExt)
 {
 	const TCHAR *lastSeparator = _STRRCHR(filePath, __PATH_SEPARATOR);

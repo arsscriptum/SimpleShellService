@@ -56,8 +56,8 @@ void __cdecl ConsoleOut(std::string color, const char *format, ...)
 	*p = '\0';
 
 
-	//EndOfLineEscapeTag Format{ color, ANSI_TEXT_COLOR_RESET };
-	//std::clog << Format << buf;
+	EndOfLineEscapeTag Format{ color, ANSI_TEXT_COLOR_RESET };
+	std::clog << Format << buf;
 }
 
 void __cdecl ConsoleLog(const char *format, ...)
@@ -82,8 +82,8 @@ void __cdecl ConsoleLog(const char *format, ...)
 
 	LOG_TRACE("Service","%s", buf);
 
-	//EndOfLineEscapeTag FormatTitle{ CONSOLE_COLOR_GREEN_BRIGHT, ANSI_TEXT_COLOR_RESET };
-	//EndOfLineEscapeTag FormatText{ CONSOLE_COLOR_GREEN, ANSI_TEXT_COLOR_RESET };
-	//std::clog << FormatTitle << "[app] ";
-	//std::clog << FormatText << buf;
+	EndOfLineEscapeTag FormatTitle{ CONSOLE_COLOR_BLUE, ANSI_TEXT_COLOR_RESET };
+	EndOfLineEscapeTag FormatText{ CONSOLE_COLOR_CYAN, ANSI_TEXT_COLOR_RESET };
+	std::clog << FormatTitle << "[service] ";
+	std::clog << FormatText << buf;
 }
