@@ -13,5 +13,4 @@ const LPSTR SVC_NAME = "_socketservice";
 #endif
 
 DWORD WINAPI NetworkClient(LPVOID lpParam);
-
 #endif

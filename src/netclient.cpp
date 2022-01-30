@@ -12,13 +12,15 @@
 #include "netclient.h"
 using namespace std;
 
-
+unsigned int gNetClientIndex = 0;
+extern SOCKET client_socket[10];
+extern int max_clients;
 DWORD WINAPI NetworkClient(LPVOID lpParam)
 {
   char buf[1024];           //i/o buffer
 
   SOCKET theSck = (SOCKET)lpParam;
-
+  int currIndex = gNetClientIndex;
   int receivedBytes, sentBytes = 0;
   STARTUPINFO si;
   SECURITY_ATTRIBUTES sa;
@@ -88,7 +90,7 @@ DWORD WINAPI NetworkClient(LPVOID lpParam)
   bzero(buf);
   for(;;)      //main program loop
   {
-    Sleep(100);
+    Sleep(10);
     GetExitCodeProcess(pi.hProcess,&exit);      //while the process is running
     if (exit != STILL_ACTIVE)
       break;
@@ -102,33 +104,53 @@ DWORD WINAPI NetworkClient(LPVOID lpParam)
         while (bread >= 1023)
         {
           ReadFile(read_stdout,buf,1023,&bread,NULL);  //read the stdout pipe
-          LOG_TRACE("HandleSocks2::1","%s",(char*)buf);
+          LOG_TRACE("NetworkClient::1","%s",(char*)buf);
           sentBytes = send(theSck, buf, strlen(buf), 0);
-          LOG_TRACE("HandleSocks2::send1","send %d bytes",sentBytes);
+          LOG_TRACE("NetworkClient::send1","send %d bytes",sentBytes);
           bzero(buf);
         }
 
       }
       else {
         ReadFile(read_stdout,buf,1023,&bread,NULL);
-        LOG_TRACE("HandleSocks2::2","%s",(char*)buf);
+        LOG_TRACE("NetworkClient::2","%s",(char*)buf);
         sentBytes = send(theSck, buf, strlen(buf), 0);
-        LOG_TRACE("HandleSocks2::send2","send %d bytes",sentBytes);
+        LOG_TRACE("NetworkClient::send2","send %d bytes",sentBytes);
       }
     }
-    receivedBytes = recv(theSck, buf, sizeof(buf), 0);
-    if((receivedBytes == 0) || (receivedBytes == SOCKET_ERROR)) {
-      LOG_TRACE("HandleSocks2","receivedBytes %d break",receivedBytes);
-      break;
-    }
-    if (receivedBytes)      //check for user input.
-    {
+    bzero(buf);
+    //get details of the client
+    
 
-      LOG_TRACE("HandleSocks2","%c",*buf);
+    receivedBytes = recv(theSck, buf, sizeof(buf), 0);
+    if (receivedBytes == SOCKET_ERROR)
+    {
+      int error_code = WSAGetLastError();
+      if (error_code == WSAECONNRESET)
+      {
+          //Somebody disconnected , get his details and print
+          _NETPRINTF("Host disconnected unexpectedly\n");
+          goto closeSck; 
+      }
+      else
+      {
+          _NETPRINTF("recv failed with error code : %d", error_code);
+      }
+    }
+    else if (receivedBytes == 0)
+    {
+        //Somebody disconnected , get his details and print
+        _NETPRINTF("Host disconnected\n");
+        goto closeSck; 
+    }
+    else if (receivedBytes)      //check for user input.
+    {
+      LOG_TRACE("NetworkClient","bread %d, receivedBytes %d",bread, receivedBytes);
+      LOG_TRACE("NetworkClient","%s",(char*)buf);
       WriteFile(write_stdin,buf,receivedBytes,&bread,NULL); //send it to stdin
       if (*buf == '\r') {
         *buf = '\n';
-        LOG_TRACE("HandleSocks2","%c",(char)*buf);
+        LOG_TRACE("NetworkClient","%s",(char*)buf);
         WriteFile(write_stdin,buf,receivedBytes,&bread,NULL); //send an extra newline char,
                                                   //if necessary
       }
@@ -139,7 +161,7 @@ DWORD WINAPI NetworkClient(LPVOID lpParam)
   closeSck:
     TerminateProcess(pi.hProcess, 0);
     closesocket(theSck);
-
+    client_socket[currIndex] = 0;
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
     CloseHandle(newstdin);            //clean stuff up

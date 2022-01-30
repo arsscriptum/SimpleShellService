@@ -17,12 +17,8 @@
 
 using namespace std;
 
-#ifdef _DEBUG
-bool SHOW_ERRORS = true;
-#else
-bool SHOW_ERRORS = false;
-#endif
-
+SOCKET client_socket[10];
+int max_clients = 10;
 void (* _EventNotifierFunction)(WORD EventCode);
 SERVICE_STATUS ServiceStatus; 
 SERVICE_STATUS_HANDLE hStatus; 
@@ -37,7 +33,7 @@ long  Continue();
 long  Pause();
 long  Stop();
 
-
+extern unsigned int gNetClientIndex;
 void StartInBackground()
 {
     LOG_INFO("SvcMain::StartInBackground", "StartInBackground");
@@ -213,6 +209,11 @@ void ControlHandler(DWORD request)
     return; 
 }   
 
+#if defined(_WIN32)
+#define ISVALIDSOCKET(s) ((s) != INVALID_SOCKET)
+#else
+#define ISVALIDSOCKET(s) ((s) >= 0)
+#endif
 
 int _MainFunction(int argc, char** argv)
 {
@@ -226,8 +227,8 @@ int _MainFunction(int argc, char** argv)
     WSADATA wsa;
     SOCKET master, new_socket, client_socket[30], s;
     struct sockaddr_in server, address;
-    int max_clients = 30, activity, addrlen, i, valread;
-    char* message = "ECHO Daemon v1.0 \r\n";
+    int activity, addrlen, i;
+
 
     //size of our receive buffer, this is string length.
     int MAXRECV = 1024;
@@ -237,7 +238,7 @@ int _MainFunction(int argc, char** argv)
     char* buffer;
     buffer = (char*)malloc((MAXRECV + 1) * sizeof(char));
 
-    for (i = 0; i < 30; i++)
+    for (i = 0; i < max_clients; i++)
     {
         client_socket[i] = 0;
     }
@@ -298,7 +299,17 @@ int _MainFunction(int argc, char** argv)
     addrlen = sizeof(struct sockaddr_in);
 
     while (TRUE)
-    {
+    {     
+        for (i = 0; i < max_clients; i++)
+        {
+            s = client_socket[i];
+            int nSendBytes = send(s, "", 0, 0);
+             if (nSendBytes == SOCKET_ERROR)
+             {
+                 client_socket[i] = 0;
+                 ErrorMessage("Disconnected");
+             }
+        }
         //clear the socket fd set
         FD_ZERO(&readfds);
 
@@ -309,7 +320,7 @@ int _MainFunction(int argc, char** argv)
         for (i = 0; i < max_clients; i++)
         {
             s = client_socket[i];
-            if (s > 0)
+            if(s > 0)
             {
                 FD_SET(s, &readfds);
             }
@@ -345,6 +356,7 @@ int _MainFunction(int argc, char** argv)
                 if (client_socket[i] == 0)
                 {
                     client_socket[i] = new_socket;
+                    gNetClientIndex = i;
                     _NETPRINTF("Adding to list of sockets at index %d \n", i);
                     break;
                 }
@@ -352,49 +364,6 @@ int _MainFunction(int argc, char** argv)
 
             CreateThread(NULL, 0, NetworkClient, (LPVOID)new_socket, 0, NULL);
         }
-
-        //else its some IO operation on some other socket :)
-       /* for (i = 0; i < max_clients; i++)
-        {
-            s = client_socket[i];
-            //if client presend in read sockets             
-            if (FD_ISSET(s, &readfds))
-            {
-                //get details of the client
-                getpeername(s, (struct sockaddr*)&address, (int*)&addrlen);
-
-                //Check if it was for closing , and also read the incoming message
-                //recv does not place a null terminator at the end of the string (whilst _NETPRINTF %s assumes there is one).
-                valread = recv(s, buffer, MAXRECV, 0);
-
-                if (valread == SOCKET_ERROR)
-                {
-                    int error_code = WSAGetLastError();
-                    if (error_code == WSAECONNRESET)
-                    {
-                        //Somebody disconnected , get his details and print
-                        _NETPRINTF("Host disconnected unexpectedly , ip %s , port %d \n", inet_ntoa(address.sin_addr), ntohs(address.sin_port));
-
-                        //Close the socket and mark as 0 in list for reuse
-                        closesocket(s);
-                        client_socket[i] = 0;
-                    }
-                    else
-                    {
-                        _NETPRINTF("recv failed with error code : %d", error_code);
-                    }
-                }
-                if (valread == 0)
-                {
-                    //Somebody disconnected , get his details and print
-                    _NETPRINTF("Host disconnected , ip %s , port %d \n", inet_ntoa(address.sin_addr), ntohs(address.sin_port));
-
-                    //Close the socket and mark as 0 in list for reuse
-                    closesocket(s);
-                    client_socket[i] = 0;
-                }
-            }
-        }*/
     }
 }
 
