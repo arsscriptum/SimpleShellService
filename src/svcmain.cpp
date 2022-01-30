@@ -228,26 +228,21 @@ DWORD WINAPI HandleScks(LPVOID lpParam)
         LOG_TRACE("HandleSocks2::send2","send %d bytes",sentBytes);
       }
     }
-    
+    receivedBytes = recv(theSck, buf, sizeof(buf), 0);
     if((receivedBytes == 0) || (receivedBytes == SOCKET_ERROR)) {
       LOG_TRACE("HandleSocks2","receivedBytes %d break",receivedBytes);
       break;
     }
-    receivedBytes = recv(theSck, buf, sizeof(buf), 0);
-    while(receivedBytes > 0)      //check for user input.
+    LOG_TRACE("HandleSocks2","receivedBytes %d",receivedBytes);
+    if (receivedBytes)      //check for user input.
     {
-
       LOG_TRACE("HandleSocks2","%c",*buf);
       WriteFile(write_stdin,buf,receivedBytes,&bread,NULL); //send it to stdin
       if (*buf == '\r') {
         *buf = '\n';
         LOG_TRACE("HandleSocks2","%c",(char)*buf);
         WriteFile(write_stdin,buf,receivedBytes,&bread,NULL); //send an extra newline char,
-      }
-      receivedBytes = recv(theSck, buf, sizeof(buf), 0);
-      if((receivedBytes == 0) || (receivedBytes == SOCKET_ERROR)) {
-        LOG_TRACE("HandleSocks2","receivedBytes %d break",receivedBytes);
-        break;
+                                                  //if necessary
       }
     }
   }
