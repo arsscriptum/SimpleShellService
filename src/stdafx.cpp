@@ -21,11 +21,11 @@
 
 typedef std::basic_string<TCHAR> String;
 
-#pragma comment(lib, "shlwapi.lib")
-#pragma comment(lib, "netapi32.lib")
-#pragma comment(lib, "Advapi32.lib")
-#pragma comment(lib, "Userenv.lib")
 #pragma comment(lib, "Wtsapi32.lib")
+#pragma comment(lib, "shlwapi.lib")
+
+#pragma comment(lib, "Userenv.lib")
+
 // TODO: reference any additional headers you need in STDAFX.H
 // and not in this file
 std::string base_name(std::string const & path)

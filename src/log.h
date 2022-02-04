@@ -116,7 +116,7 @@ void __cdecl ConsoleLog(const char *format, ...);
 # define COUTC( ... )       { ConsoleOut(CONSOLE_COLOR_CYAN_BRIGHT,  __VA_ARGS__ );  }	
 # define COUTCS( ... )      { ConsoleOut(CONSOLE_COLOR_CYAN,  __VA_ARGS__ );  }
 # define COUTINFO( ... )    { ConsoleOut( CONSOLE_COLOR_BKGRND_WHITE, __VA_ARGS__ );  }	
-
+#define LOG_PRINTF ConsoleLog
 #define _NETPRINTF ConsoleLog
 int WriteToLog(char* str);
 #ifndef DEJA_DISABLED

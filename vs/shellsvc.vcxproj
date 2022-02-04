@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="DebugUnicode|x64">
-      <Configuration>DebugUnicode</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>    
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -51,11 +55,53 @@
     <TargetName>shellsvc</TargetName>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Link>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <FixedBaseAddress>false</FixedBaseAddress>
+      <FixedBaseAddress>false</FixedBaseAddress>
+      <EntryPointSymbol />
+      <EntryPointSymbol />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <FixedBaseAddress>false</FixedBaseAddress>
+      <EntryPointSymbol />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <FixedBaseAddress>false</FixedBaseAddress>
+      <EntryPointSymbol />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Link>
+      <EntryPointSymbol />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Link>
+      <FixedBaseAddress>false</FixedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="$(ProjectRoot)src\stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\src\disguise.cpp" />
     <ClCompile Include="..\src\init.cpp" />
+    <ClCompile Include="..\src\PE.cpp" />
+    <ClCompile Include="..\src\windows-api-ex.cpp" />
     <ClCompile Include="..\src\log.cpp" />
     <ClCompile Include="..\src\svcmain.cpp" />
     <ClCompile Include="..\src\win32.cpp" />
@@ -66,9 +112,12 @@
     <ResourceCompile Include="$(ProjectRoot)src\resources.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\console_colors_define.h" />
+    <ClInclude Include="..\src\internals.h" />
     <ClInclude Include="..\src\log.h" />
     <ClInclude Include="..\src\macros.h" />
     <ClInclude Include="..\src\nowarns.h" />
+    <ClInclude Include="..\src\PE.h" />
     <ClInclude Include="..\src\stdafx.h" />
     <ClInclude Include="..\src\svcinc\Config.h" />
     <ClInclude Include="..\src\svcinc\Contants.h" />
@@ -79,6 +128,7 @@
     <ClInclude Include="..\src\win32.h" />
     <ClInclude Include="..\src\cmdline.h" />
     <ClInclude Include="..\src\netclient.h" />
+    <ClInclude Include="..\src\windows-api-ex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

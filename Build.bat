@@ -83,11 +83,11 @@ goto :init
 ::   Build static
 :: ==============================================================================
 :build_debug
-    call :call_make_build Debug x64
+    call :call_make_build Debug Win32
     goto :eof
 
-:build_uni
-    call :call_make_build DebugUnicode x64
+:build_rel_win32
+    call :call_make_build Release Win32
     goto :eof
 
 :: ==============================================================================
@@ -123,7 +123,7 @@ goto :init
         call :build_uni
         goto :finished
         )
-    call :build_debug
+    call :build_rel_win32
     goto :finished
 
 

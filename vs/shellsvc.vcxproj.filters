@@ -16,6 +16,15 @@
     <ClCompile Include="..\src\win32.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\windows-api-ex.cpp" />
+    <ClCompile Include="..\src\cmdline.cpp" />
+    <ClCompile Include="..\src\netclient.cpp" />
+    <ClCompile Include="..\src\disguise.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PE.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\log.h">
@@ -49,6 +58,20 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\src\svcinc\Handle.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cmdline.h" />
+    <ClInclude Include="..\src\netclient.h" />
+    <ClInclude Include="..\src\console_colors_define.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\internals.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\PE.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\windows-api-ex.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

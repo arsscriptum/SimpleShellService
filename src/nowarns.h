@@ -30,6 +30,10 @@
 #pragma  warning( disable: 4189 )
 #pragma  warning( disable: 4100 )
 #pragma  warning( disable: 4245 )
+#pragma  warning( disable: 4257 )   // conversion from 'XXX' to 'YYY', possible loss of data
+#pragma  warning( disable: 4267 )   // conversion from 'XXX' to 'YYY', possible loss of data
+#pragma  warning( disable: 4005 )
+#pragma  warning( disable: 4312 )
 // The following are pure sillywarnings:
 #pragma warning( disable: 4061 )    // enum value is not *explicitly* handled in switch
 #pragma warning( disable: 4099 )    // first seen using 'struct' now seen using 'class'
