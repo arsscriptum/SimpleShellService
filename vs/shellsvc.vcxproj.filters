@@ -25,6 +25,15 @@
     <ClCompile Include="..\src\PE.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\INIReader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ini.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\helpers.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\log.h">
@@ -72,6 +81,15 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\src\windows-api-ex.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ini.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\INIReader.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\helpers.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

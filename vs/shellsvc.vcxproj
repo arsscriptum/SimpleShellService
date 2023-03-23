@@ -75,6 +75,10 @@
       <FixedBaseAddress>false</FixedBaseAddress>
       <EntryPointSymbol />
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(DejaInsight_LinkOpt_Dll) $(OutDir)
+copy $(ProjectDir)..\ini\*.ini $(OutDir)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
@@ -82,6 +86,10 @@
       <FixedBaseAddress>false</FixedBaseAddress>
       <EntryPointSymbol />
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(DejaInsight_LinkOpt_Dll) $(OutDir)
+copy $(ProjectDir)..\ini\*.ini $(OutDir)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Link>
@@ -99,6 +107,9 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\disguise.cpp" />
+    <ClCompile Include="..\src\helpers.cpp" />
+    <ClCompile Include="..\src\ini.cpp" />
+    <ClCompile Include="..\src\INIReader.cpp" />
     <ClCompile Include="..\src\init.cpp" />
     <ClCompile Include="..\src\PE.cpp" />
     <ClCompile Include="..\src\windows-api-ex.cpp" />
@@ -113,6 +124,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\console_colors_define.h" />
+    <ClInclude Include="..\src\helpers.h" />
+    <ClInclude Include="..\src\ini.h" />
+    <ClInclude Include="..\src\INIReader.h" />
     <ClInclude Include="..\src\internals.h" />
     <ClInclude Include="..\src\log.h" />
     <ClInclude Include="..\src\macros.h" />

@@ -146,12 +146,20 @@ Function Register-CustomService {
             }
             
 
-            $Result = New-Service -Name "$Name" -BinaryPathName "$Path" -DisplayName "$DisplayName" -Description "$Description" -StartupType Automatic -Verbose -ErrorAction Stop  4> "$ENV:Temp\Verbose.txt"
-            [string[]]$StrVerbose = Get-Content "$ENV:Temp\Verbose.txt"
-            $OutVerbose = $StrVerbose[0]
-            svclog "$OutVerbose" -f Red -n
-            svclog " SUCCESS" -r 
-        
+
+
+            if($Exists -eq $False){
+                $LogStr = "`n================================================================================`nPerforming the operation `"New-Service`"`n`tServiceName `"$Name`"`n`tBinary Path `"$Path`"`n`tDisplayName `"$DisplayName`"`n`tDescription `"$Description`"`n================================================================================"    
+                $Result = New-Service -Name "$Name" -BinaryPathName "$Path" -DisplayName "$DisplayName" -Description "$Description" -StartupType Automatic -Verbose -ErrorAction Stop  4> "$ENV:Temp\Verbose.txt"
+                [string[]]$StrVerbose = Get-Content "$ENV:Temp\Verbose.txt"
+                $OutVerbose = $StrVerbose[0]
+                svclog "$LogStr"    
+                svclog "$OutVerbose" -f DarkYellow   
+                svclog " SUCCESS" -r 
+            }else{
+                 $LogStr = "`n================================================================================`nService Already Exists`n`tServiceName `"$Name`"`n`tBinary Path `"$Path`"`n`tDisplayName `"$DisplayName`"`n`tDescription `"$Description`"`n================================================================================"    
+                 svclog "$LogStr"      
+            }
 
             if($Start){
                 Start-Service $Name -ErrorAction Stop  4> "$ENV:Temp\Verbose.txt"

