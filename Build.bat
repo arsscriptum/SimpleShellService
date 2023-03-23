@@ -86,10 +86,6 @@ goto :init
     call :call_make_build Debug Win32
     goto :eof
 
-:build_rel_win32
-    call :call_make_build Release Win32
-    goto :eof
-
 :: ==============================================================================
 ::   Build x64
 :: ==============================================================================
@@ -113,17 +109,15 @@ goto :init
 	echo "%__target%"
 	if "%__target%" == "clean" (
 		call :clean
-
 		goto :finished
 		)
-    if "%__target%" == "rebuild" (
+    if "%__target%" == "all" (
 		call :clean
-		)
-    if "%__target%" == "uni" (
-        call :build_uni
+        call :build_debug
+        call :build_release
         goto :finished
-        )
-    call :build_rel_win32
+		)
+    call :build_release
     goto :finished
 
 
