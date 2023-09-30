@@ -24,3 +24,4 @@ echo starting build...
 echo "building main.exe..."
 cl /Ox main.cpp %defines% %link_options% %libs% /out:pipe.exe 
 del /F /Q *.obj 2> NUL
+
